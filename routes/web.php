@@ -1,43 +1,41 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ArticleController;
 use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Public Routes
+| Public
 |--------------------------------------------------------------------------
-|
-| Halaman yang dapat diakses semua pengunjung.
-|
 */
 
 Route::inertia('/', 'Welcome')->name('home');
 
 /*
 |--------------------------------------------------------------------------
-| Dashboard
+| Admin & Penulis
 |--------------------------------------------------------------------------
-|
-| Dashboard dapat diakses admin dan penulis yang sudah login,
-| terverifikasi, dan memiliki akun aktif.
-|
 */
 
 Route::middleware([
     'auth',
     'verified',
     'role:admin,penulis',
-])->group(function () {
-    Route::inertia('/dashboard', 'Dashboard')->name('dashboard');
-});
+])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::get('/', [DashboardController::class, 'index'])
+            ->name('dashboard');
+
+        Route::resource('articles', ArticleController::class);
+    });
 
 /*
 |--------------------------------------------------------------------------
-| Admin Routes
+| Khusus Admin
 |--------------------------------------------------------------------------
-|
-| Halaman yang hanya dapat diakses oleh administrator.
-|
 */
 
 Route::middleware([
@@ -48,13 +46,17 @@ Route::middleware([
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
-        // Route khusus admin akan ditambahkan di sini.
+        // Categories
+        // Tags
+        // Regions
+        // Users
+        // akan ditambahkan nanti.
     });
 
 /*
 |--------------------------------------------------------------------------
-| Settings Routes
+| Settings
 |--------------------------------------------------------------------------
 */
 
-require __DIR__.'/settings.php';
+require __DIR__ . '/settings.php';
