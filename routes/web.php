@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ArticleController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\TagController;
+use App\Http\Controllers\RegionController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -46,9 +49,14 @@ Route::middleware([
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
-        // Categories
-        // Tags
-        // Regions
+        Route::resource('categories', CategoryController::class)
+            ->except(['show']);
+
+        Route::resource('tags', TagController::class)
+            ->except(['show']);
+
+        Route::resource('regions', RegionController::class)
+            ->except(['show']);
         // Users
         // akan ditambahkan nanti.
     });
