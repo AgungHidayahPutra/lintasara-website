@@ -1,3 +1,4 @@
+
 <?php
 
 use App\Models\User;
@@ -50,36 +51,34 @@ test('email verification status is unchanged when the email address is unchanged
     expect($user->refresh()->email_verified_at)->not->toBeNull();
 });
 
-test('user can delete their account', function () {
+test('users cannot delete their own accounts', function () {
     $user = User::factory()->create();
 
     $response = $this
         ->actingAs($user)
-        ->delete(route('profile.destroy'), [
+        ->delete('/settings/profile', [
             'password' => 'password',
         ]);
 
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect(route('home'));
+    $response->assertStatus(405);
 
-    $this->assertGuest();
-    expect($user->fresh())->toBeNull();
+    expect($user->fresh())->not->toBeNull();
+
+    $this->assertAuthenticatedAs($user);
 });
 
-test('correct password must be provided to delete account', function () {
+test('users cannot delete their own accounts even with an incorrect password', function () {
     $user = User::factory()->create();
 
     $response = $this
         ->actingAs($user)
-        ->from(route('profile.edit'))
-        ->delete(route('profile.destroy'), [
+        ->delete('/settings/profile', [
             'password' => 'wrong-password',
         ]);
 
-    $response
-        ->assertSessionHasErrors('password')
-        ->assertRedirect(route('profile.edit'));
+    $response->assertStatus(405);
 
     expect($user->fresh())->not->toBeNull();
+
+    $this->assertAuthenticatedAs($user);
 });

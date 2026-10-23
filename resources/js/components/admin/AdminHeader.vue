@@ -1,7 +1,18 @@
 <script setup lang="ts">
 import { Link, usePage } from "@inertiajs/vue3";
-import { ChevronRight, Menu, Search, X } from "lucide-vue-next";
-import { onMounted, ref } from "vue";
+import {
+    ChevronRight,
+    FileText,
+    FolderOpen,
+    Gauge,
+    MapPin,
+    Menu,
+    Search,
+    Tags,
+    Users,
+    X,
+} from "lucide-vue-next";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 import AdminLogo from "./AdminLogo.vue";
 import AdminUserMenu from "./AdminUserMenu.vue";
@@ -18,55 +29,134 @@ defineProps<{
 const page = usePage();
 
 const mobileOpen = ref(false);
+const clientReady = ref(false);
+
+const user = computed(() => page.props.auth.user);
+
+const isAdmin = computed(() => user.value?.role === "admin");
 
 /*
 |--------------------------------------------------------------------------
-| Client Ready
+| Menu Navigation
 |--------------------------------------------------------------------------
-|
-| Teleport tidak dirender saat SSR.
-| Ini mencegah hydration mismatch antara server dan browser.
-|
 */
 
-const clientReady = ref(false);
+const contentMenus = computed(() => {
+    const menus = [
+        {
+            title: "Artikel",
+            href: "/admin/articles",
+            icon: FileText,
+        },
+    ];
 
-onMounted(() => {
-    clientReady.value = true;
+    if (isAdmin.value) {
+        menus.push(
+            {
+                title: "Kategori",
+                href: "/admin/categories",
+                icon: FolderOpen,
+            },
+            {
+                title: "Tag",
+                href: "/admin/tags",
+                icon: Tags,
+            },
+            {
+                title: "Wilayah",
+                href: "/admin/regions",
+                icon: MapPin,
+            },
+        );
+    }
+
+    return menus;
+});
+
+const managementMenus = computed(() => {
+    if (!isAdmin.value) {
+        return [];
+    }
+
+    return [
+        {
+            title: "Pengguna",
+            href: "/admin/users",
+            icon: Users,
+        },
+    ];
 });
 
 /*
 |--------------------------------------------------------------------------
-| Active Menu
+| Active Navigation
 |--------------------------------------------------------------------------
 */
 
 function isActive(href: string) {
-    const url = page.url.split("?")[0];
+    const currentUrl = page.url.split("?")[0];
 
     if (href === "/admin") {
-        return url === "/admin";
+        return currentUrl === "/admin";
     }
 
-    return url.startsWith(href);
+    return currentUrl.startsWith(href);
 }
 
 /*
 |--------------------------------------------------------------------------
-| Mobile Menu
+| Mobile Sidebar
 |--------------------------------------------------------------------------
 */
 
-const menus = [
-    {
-        title: "Dashboard",
-        href: "/admin",
+function closeMobileMenu() {
+    mobileOpen.value = false;
+}
+
+function openMobileMenu() {
+    mobileOpen.value = true;
+}
+
+function handleKeydown(event: KeyboardEvent) {
+    if (event.key === "Escape") {
+        closeMobileMenu();
+    }
+}
+
+onMounted(() => {
+    clientReady.value = true;
+    window.addEventListener("keydown", handleKeydown);
+});
+
+onUnmounted(() => {
+    window.removeEventListener("keydown", handleKeydown);
+    document.body.style.overflow = "";
+});
+
+/*
+|--------------------------------------------------------------------------
+| Lock Body Scroll
+|--------------------------------------------------------------------------
+*/
+
+watch(mobileOpen, (open) => {
+    if (typeof document !== "undefined") {
+        document.body.style.overflow = open ? "hidden" : "";
+    }
+});
+
+/*
+|--------------------------------------------------------------------------
+| Close Sidebar After Navigation
+|--------------------------------------------------------------------------
+*/
+
+watch(
+    () => page.url,
+    () => {
+        closeMobileMenu();
     },
-    {
-        title: "Artikel",
-        href: "/admin/articles",
-    },
-];
+);
 </script>
 
 <template>
@@ -77,8 +167,10 @@ const menus = [
         <button
             type="button"
             aria-label="Buka sidebar"
+            :aria-expanded="mobileOpen"
+            aria-controls="lintasara-mobile-navigation"
             class="mr-3 flex size-10 cursor-pointer items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 lg:hidden"
-            @click="mobileOpen = true"
+            @click="openMobileMenu"
         >
             <Menu class="size-5" />
         </button>
@@ -138,15 +230,7 @@ const menus = [
         </div>
     </header>
 
-    <!--
-    |--------------------------------------------------------------------------
-    | MOBILE SIDEBAR
-    |--------------------------------------------------------------------------
-    |
-    | Hanya dirender setelah Vue selesai mount di browser.
-    |
-    -->
-
+    <!-- MOBILE SIDEBAR -->
     <Teleport v-if="clientReady" to="body">
         <div v-if="mobileOpen" class="fixed inset-0 z-[100] lg:hidden">
             <!-- OVERLAY -->
@@ -154,53 +238,182 @@ const menus = [
                 type="button"
                 aria-label="Tutup sidebar"
                 class="absolute inset-0 cursor-pointer bg-slate-950/40 backdrop-blur-[2px]"
-                @click="mobileOpen = false"
+                @click="closeMobileMenu"
             />
 
             <!-- SIDEBAR -->
             <aside
-                class="absolute inset-y-0 left-0 flex w-[290px] flex-col bg-white shadow-2xl"
+                id="lintasara-mobile-navigation"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Navigasi Lintasara"
+                class="absolute inset-y-0 left-0 flex w-[290px] max-w-[85vw] flex-col bg-white shadow-2xl"
             >
-                <!-- HEADER -->
+                <!-- LOGO -->
                 <div
-                    class="flex h-[76px] items-center justify-between border-b border-slate-100 px-5"
+                    class="flex h-[76px] shrink-0 items-center justify-between border-b border-slate-100 px-5"
                 >
-                    <AdminLogo />
+                    <Link href="/admin" @click="closeMobileMenu">
+                        <AdminLogo />
+                    </Link>
 
                     <button
                         type="button"
                         aria-label="Tutup sidebar"
                         class="flex size-9 cursor-pointer items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-                        @click="mobileOpen = false"
+                        @click="closeMobileMenu"
                     >
                         <X class="size-5" />
                     </button>
                 </div>
 
-                <!-- MENU -->
-                <div class="flex-1 overflow-y-auto p-4">
-                    <p
-                        class="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400"
-                    >
-                        Menu
-                    </p>
-
-                    <nav class="space-y-1">
+                <!-- NAVIGATION -->
+                <div
+                    class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5"
+                >
+                    <!-- DASHBOARD -->
+                    <nav aria-label="Dashboard">
                         <Link
-                            v-for="item in menus"
-                            :key="item.href"
-                            :href="item.href"
-                            class="flex h-11 cursor-pointer items-center rounded-xl px-3 text-sm font-medium transition"
+                            href="/admin"
+                            class="group flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-all"
                             :class="
-                                isActive(item.href)
+                                isActive('/admin')
                                     ? 'bg-orange-50 text-orange-600'
-                                    : 'text-slate-600 hover:bg-slate-50'
+                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
                             "
-                            @click="mobileOpen = false"
+                            @click="closeMobileMenu"
                         >
-                            {{ item.title }}
+                            <Gauge
+                                class="size-[19px] shrink-0"
+                                :class="
+                                    isActive('/admin')
+                                        ? 'text-orange-500'
+                                        : 'text-slate-400 group-hover:text-slate-700'
+                                "
+                            />
+
+                            Dashboard
+
+                            <span
+                                v-if="isActive('/admin')"
+                                class="ml-auto size-1.5 rounded-full bg-orange-500"
+                            />
                         </Link>
                     </nav>
+
+                    <!-- KONTEN -->
+                    <div class="mt-7">
+                        <p
+                            class="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                        >
+                            Konten
+                        </p>
+
+                        <nav aria-label="Konten" class="space-y-1">
+                            <Link
+                                v-for="item in contentMenus"
+                                :key="item.href"
+                                :href="item.href"
+                                class="group flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-all"
+                                :class="
+                                    isActive(item.href)
+                                        ? 'bg-orange-50 text-orange-600'
+                                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
+                                "
+                                @click="closeMobileMenu"
+                            >
+                                <component
+                                    :is="item.icon"
+                                    class="size-[19px] shrink-0"
+                                    :class="
+                                        isActive(item.href)
+                                            ? 'text-orange-500'
+                                            : 'text-slate-400 group-hover:text-slate-700'
+                                    "
+                                />
+
+                                {{ item.title }}
+
+                                <span
+                                    v-if="isActive(item.href)"
+                                    class="ml-auto size-1.5 rounded-full bg-orange-500"
+                                />
+                            </Link>
+                        </nav>
+                    </div>
+
+                    <!-- MANAJEMEN -->
+                    <div v-if="managementMenus.length" class="mt-7">
+                        <p
+                            class="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                        >
+                            Manajemen
+                        </p>
+
+                        <nav aria-label="Manajemen" class="space-y-1">
+                            <Link
+                                v-for="item in managementMenus"
+                                :key="item.href"
+                                :href="item.href"
+                                class="group flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-all"
+                                :class="
+                                    isActive(item.href)
+                                        ? 'bg-orange-50 text-orange-600'
+                                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
+                                "
+                                @click="closeMobileMenu"
+                            >
+                                <component
+                                    :is="item.icon"
+                                    class="size-[19px] shrink-0"
+                                    :class="
+                                        isActive(item.href)
+                                            ? 'text-orange-500'
+                                            : 'text-slate-400 group-hover:text-slate-700'
+                                    "
+                                />
+
+                                {{ item.title }}
+
+                                <span
+                                    v-if="isActive(item.href)"
+                                    class="ml-auto size-1.5 rounded-full bg-orange-500"
+                                />
+                            </Link>
+                        </nav>
+                    </div>
+                </div>
+
+                <!-- USER PROFILE -->
+                <div class="shrink-0 border-t border-slate-100 p-4">
+                    <div
+                        class="flex items-center gap-3 rounded-2xl bg-slate-50 p-3"
+                    >
+                        <div
+                            class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#071a36] text-xs font-bold text-white"
+                        >
+                            {{
+                                user?.name
+                                    ?.split(" ")
+                                    .map((word: string) => word.charAt(0))
+                                    .join("")
+                                    .substring(0, 2)
+                                    .toUpperCase() || "U"
+                            }}
+                        </div>
+
+                        <div class="min-w-0 flex-1">
+                            <p
+                                class="truncate text-sm font-semibold text-slate-800"
+                            >
+                                {{ user?.name ?? "Pengguna" }}
+                            </p>
+
+                            <p class="truncate text-xs text-slate-400">
+                                {{ user?.email ?? "" }}
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </aside>
         </div>

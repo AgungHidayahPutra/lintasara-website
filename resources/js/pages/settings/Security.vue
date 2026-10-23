@@ -1,30 +1,25 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
-import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
-import Heading from '@/components/Heading.vue';
-import InputError from '@/components/InputError.vue';
-import PasswordInput from '@/components/PasswordInput.vue';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { edit } from '@/routes/security';
-import type { Props as ManagePasskeysProps } from '@/components/ManagePasskeys.vue';
-import ManagePasskeys from '@/components/ManagePasskeys.vue';
-import type { Props as ManageTwoFactorProps } from '@/components/ManageTwoFactor.vue';
-import ManageTwoFactor from '@/components/ManageTwoFactor.vue';
+import { Form, Head } from "@inertiajs/vue3";
+import { KeyRound, LockKeyhole, ShieldCheck } from "lucide-vue-next";
 
-// oxfmt-ignore
+import SecurityController from "@/actions/App/Http/Controllers/Settings/SecurityController";
+import InputError from "@/components/InputError.vue";
+import PasswordInput from "@/components/PasswordInput.vue";
+import ManageTwoFactor from "@/components/ManageTwoFactor.vue";
+import type { Props as ManageTwoFactorProps } from "@/components/ManageTwoFactor.vue";
+import { edit } from "@/routes/security";
+
 type Props = {
     passwordRules: string;
-} & ManagePasskeysProps &
-    ManageTwoFactorProps;
+} & ManageTwoFactorProps;
 
-const props = defineProps<Props>();
+defineProps<Props>();
 
 defineOptions({
     layout: {
         breadcrumbs: [
             {
-                title: 'Security settings',
+                title: "Keamanan Akun",
                 href: edit(),
             },
         ],
@@ -33,88 +28,191 @@ defineOptions({
 </script>
 
 <template>
-    <Head title="Security settings" />
+    <Head title="Keamanan Akun | Lintasara" />
 
-    <h1 class="sr-only">Security settings</h1>
+    <div class="mx-auto w-full max-w-5xl space-y-8 pb-12">
+        <!-- Header -->
+        <div>
+            <div
+                class="mb-4 inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-600"
+            >
+                <ShieldCheck class="size-4" />
+                PENGATURAN KEAMANAN
+            </div>
 
-    <div class="space-y-6">
-        <Heading
-            variant="small"
-            title="Update password"
-            description="Ensure your account is using a long, random password to stay secure"
-        />
+            <h1
+                class="text-2xl font-bold tracking-tight text-[#071A36] sm:text-3xl"
+            >
+                Keamanan Akun
+            </h1>
 
-        <Form
-            v-bind="SecurityController.update.form()"
-            :options="{
-                preserveScroll: true,
-            }"
-            reset-on-success
-            :reset-on-error="[
-                'password',
-                'password_confirmation',
-                'current_password',
-            ]"
-            class="space-y-6"
-            v-slot="{ errors, processing }"
+            <p class="mt-2 text-sm leading-6 text-slate-500">
+                Kelola kata sandi dan perlindungan tambahan untuk menjaga
+                keamanan akun redaksi Lintasara.
+            </p>
+        </div>
+
+        <!-- Password Card -->
+        <section
+            class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
         >
-            <div class="grid gap-2">
-                <Label for="current_password">Current password</Label>
-                <PasswordInput
-                    id="current_password"
-                    name="current_password"
-                    class="mt-1 block w-full"
-                    autocomplete="current-password"
-                    placeholder="Current password"
-                />
-                <InputError :message="errors.current_password" />
-            </div>
-
-            <div class="grid gap-2">
-                <Label for="password">New password</Label>
-                <PasswordInput
-                    id="password"
-                    name="password"
-                    class="mt-1 block w-full"
-                    autocomplete="new-password"
-                    placeholder="New password"
-                    :passwordrules="props.passwordRules"
-                />
-                <InputError :message="errors.password" />
-            </div>
-
-            <div class="grid gap-2">
-                <Label for="password_confirmation">Confirm password</Label>
-                <PasswordInput
-                    id="password_confirmation"
-                    name="password_confirmation"
-                    class="mt-1 block w-full"
-                    autocomplete="new-password"
-                    placeholder="Confirm password"
-                    :passwordrules="props.passwordRules"
-                />
-                <InputError :message="errors.password_confirmation" />
-            </div>
-
-            <div class="flex items-center gap-4">
-                <Button
-                    :disabled="processing"
-                    data-test="update-password-button"
+            <div
+                class="flex items-start gap-4 border-b border-slate-100 px-6 py-6 sm:px-8"
+            >
+                <div
+                    class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-orange-50"
                 >
-                    Save
-                </Button>
+                    <KeyRound class="size-5 text-orange-500" />
+                </div>
+
+                <div>
+                    <h2 class="text-base font-bold text-[#071A36]">
+                        Ubah Kata Sandi
+                    </h2>
+
+                    <p class="mt-1 text-sm leading-6 text-slate-500">
+                        Gunakan kata sandi yang kuat dan berbeda dari kata sandi
+                        yang digunakan sebelumnya.
+                    </p>
+                </div>
             </div>
-        </Form>
+
+            <div class="px-6 py-7 sm:px-8">
+                <Form
+                    :action="SecurityController.update.url()"
+                    method="put"
+                    :options="{
+                        preserveScroll: true,
+                    }"
+                    reset-on-success
+                    class="max-w-xl space-y-6"
+                    v-slot="{ errors, processing, wasSuccessful }"
+                >
+                    <div>
+                        <label
+                            for="current_password"
+                            class="mb-2 block text-sm font-semibold text-[#071A36]"
+                        >
+                            Kata Sandi Saat Ini
+                        </label>
+
+                        <PasswordInput
+                            id="current_password"
+                            name="current_password"
+                            class="block w-full"
+                            autocomplete="current-password"
+                            placeholder="Masukkan kata sandi saat ini"
+                        />
+
+                        <InputError
+                            :message="errors.current_password"
+                            class="mt-2"
+                        />
+                    </div>
+
+                    <div>
+                        <label
+                            for="password"
+                            class="mb-2 block text-sm font-semibold text-[#071A36]"
+                        >
+                            Kata Sandi Baru
+                        </label>
+
+                        <PasswordInput
+                            id="password"
+                            name="password"
+                            class="block w-full"
+                            autocomplete="new-password"
+                            placeholder="Masukkan kata sandi baru"
+                            :passwordrules="passwordRules"
+                        />
+
+                        <InputError :message="errors.password" class="mt-2" />
+                    </div>
+
+                    <div>
+                        <label
+                            for="password_confirmation"
+                            class="mb-2 block text-sm font-semibold text-[#071A36]"
+                        >
+                            Konfirmasi Kata Sandi Baru
+                        </label>
+
+                        <PasswordInput
+                            id="password_confirmation"
+                            name="password_confirmation"
+                            class="block w-full"
+                            autocomplete="new-password"
+                            placeholder="Ulangi kata sandi baru"
+                            :passwordrules="passwordRules"
+                        />
+
+                        <InputError
+                            :message="errors.password_confirmation"
+                            class="mt-2"
+                        />
+                    </div>
+
+                    <div
+                        class="flex flex-wrap items-center gap-4 border-t border-slate-100 pt-6"
+                    >
+                        <button
+                            type="submit"
+                            :disabled="processing"
+                            class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#071A36] px-6 text-sm font-semibold text-white transition hover:bg-[#102b51] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            <LockKeyhole class="size-4" />
+
+                            {{
+                                processing
+                                    ? "Menyimpan..."
+                                    : "Simpan Kata Sandi"
+                            }}
+                        </button>
+
+                        <span
+                            v-if="wasSuccessful"
+                            class="text-sm font-medium text-emerald-600"
+                        >
+                            Kata sandi berhasil diperbarui.
+                        </span>
+                    </div>
+                </Form>
+            </div>
+        </section>
+
+        <!-- Two Factor Card -->
+        <section
+            class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+        >
+            <div
+                class="flex items-start gap-4 border-b border-slate-100 px-6 py-6 sm:px-8"
+            >
+                <div
+                    class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-orange-50"
+                >
+                    <ShieldCheck class="size-5 text-orange-500" />
+                </div>
+
+                <div>
+                    <h2 class="text-base font-bold text-[#071A36]">
+                        Autentikasi Dua Faktor
+                    </h2>
+
+                    <p class="mt-1 text-sm leading-6 text-slate-500">
+                        Tambahkan lapisan keamanan dengan kode verifikasi dari
+                        aplikasi autentikator.
+                    </p>
+                </div>
+            </div>
+
+            <div class="px-6 py-7 sm:px-8">
+                <ManageTwoFactor
+                    :canManageTwoFactor="canManageTwoFactor"
+                    :requiresConfirmation="requiresConfirmation"
+                    :twoFactorEnabled="twoFactorEnabled"
+                />
+            </div>
+        </section>
     </div>
-
-    <ManageTwoFactor
-        :canManageTwoFactor="canManageTwoFactor"
-        :requiresConfirmation="requiresConfirmation"
-        :twoFactorEnabled="twoFactorEnabled"
-    />
-
-    <ManagePasskeys
-        :canManagePasskeys="canManagePasskeys"
-        :passkeys="passkeys"
-    />
 </template>

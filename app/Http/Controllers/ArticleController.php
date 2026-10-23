@@ -13,16 +13,53 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Support\ArticleContent;
 use Illuminate\Support\Facades\Storage;
 
 class ArticleController extends Controller
 {
+
+
+    /**
+     * Pastikan pengguna berhak mengakses artikel.
+     *
+     * Administrator boleh mengakses seluruh artikel.
+     * Penulis hanya boleh mengakses artikel sendiri.
+     */
+    private function authorizeArticle(
+        Request $request,
+        Article $article
+    ): void {
+        $user = $request->user();
+
+        abort_unless(
+            $user->role === 'admin' ||
+                (
+                    $user->role === 'penulis' &&
+                    (int) $article->user_id === (int) $user->id
+                ),
+            403,
+            'Anda tidak memiliki izin untuk mengakses artikel ini.'
+        );
+    }
+
     /**
      * Menampilkan daftar artikel.
      */
     public function index(Request $request): Response
     {
-        $articles = Article::query()
+
+        $user = $request->user();
+
+        $articleQuery = function () use ($user) {
+            return Article::query()
+                ->when(
+                    $user->role === 'penulis',
+                    fn($query) => $query->where('user_id', $user->id)
+                );
+        };
+
+        $articles = $articleQuery()
             ->with([
                 'category:id,name',
                 'region:id,name',
@@ -68,17 +105,17 @@ class ArticleController extends Controller
             ]);
 
         $stats = [
-            'total' => Article::query()->count(),
+            'total' => $articleQuery()->count(),
 
-            'published' => Article::query()
+            'published' => $articleQuery()
                 ->where('status', 'published')
                 ->count(),
 
-            'draft' => Article::query()
+            'draft' => $articleQuery()
                 ->where('status', 'draft')
                 ->count(),
 
-            'archived' => Article::query()
+            'archived' => $articleQuery()
                 ->where('status', 'archived')
                 ->count(),
         ];
@@ -314,7 +351,7 @@ class ArticleController extends Controller
 
                 'excerpt' => $validated['excerpt'] ?? null,
 
-                'content' => $validated['content'],
+                'content' => ArticleContent::sanitize($validated['content']),
 
                 'thumbnail' => $thumbnailPath,
 
@@ -366,8 +403,12 @@ class ArticleController extends Controller
     /**
      * Menampilkan preview artikel.
      */
-    public function show(Article $article): Response
-    {
+    public function show(
+        Request $request,
+        Article $article
+    ): Response {
+        $this->authorizeArticle($request, $article);
+
         $article->load([
             'category:id,name',
             'region:id,parent_id,name,type',
@@ -453,8 +494,12 @@ class ArticleController extends Controller
     /**
      * Menampilkan form edit artikel.
      */
-    public function edit(Article $article): Response
-    {
+    public function edit(
+        Request $request,
+        Article $article
+    ): Response {
+        $this->authorizeArticle($request, $article);
+
         $article->load([
             'tags:id,name',
         ]);
@@ -536,6 +581,8 @@ class ArticleController extends Controller
         Request $request,
         Article $article
     ): RedirectResponse {
+        $this->authorizeArticle($request, $article);
+
         $validated = $request->validate([
             'title' => [
                 'required',
@@ -681,24 +728,27 @@ class ArticleController extends Controller
     |--------------------------------------------------------------------------
     */
 
-        $thumbnailPath = $article->thumbnail;
+
+        /*
+|--------------------------------------------------------------------------
+| Thumbnail
+|--------------------------------------------------------------------------
+*/
+
+        $oldThumbnailPath = $article->thumbnail;
+        $thumbnailPath = $oldThumbnailPath;
+        $newThumbnailPath = null;
 
         if ($request->boolean('remove_thumbnail')) {
-            if ($thumbnailPath) {
-                Storage::disk('public')->delete($thumbnailPath);
-            }
-
             $thumbnailPath = null;
         }
 
         if ($request->hasFile('thumbnail')) {
-            if ($thumbnailPath) {
-                Storage::disk('public')->delete($thumbnailPath);
-            }
-
-            $thumbnailPath = $request
+            $newThumbnailPath = $request
                 ->file('thumbnail')
                 ->store('articles', 'public');
+
+            $thumbnailPath = $newThumbnailPath;
         }
 
         /*
@@ -707,70 +757,88 @@ class ArticleController extends Controller
     |--------------------------------------------------------------------------
     */
 
-        DB::transaction(function () use (
-            $article,
-            $validated,
-            $slug,
-            $thumbnailPath
-        ) {
-            $publishedAt = null;
+        try {
+            DB::transaction(function () use (
+                $article,
+                $validated,
+                $slug,
+                $thumbnailPath
+            ) {
+                $publishedAt = null;
 
-            if ($validated['status'] === 'published') {
-                $publishedAt =
-                    $validated['published_at']
-                    ?? $article->published_at
-                    ?? now();
+                if ($validated['status'] === 'published') {
+                    $publishedAt =
+                        $validated['published_at']
+                        ?? $article->published_at
+                        ?? now();
+                }
+
+                $article->update([
+                    'category_id' => $validated['category_id'],
+
+                    'region_id' =>
+                    $validated['region_id'] ?? null,
+
+                    'title' => $validated['title'],
+
+                    'slug' => $slug,
+
+                    'excerpt' =>
+                    $validated['excerpt'] ?? null,
+
+                    'content' => ArticleContent::sanitize($validated['content']),
+
+                    'thumbnail' => $thumbnailPath,
+
+                    'thumbnail_alt' =>
+                    $validated['thumbnail_alt'] ?? null,
+
+                    'image_caption' =>
+                    $validated['image_caption'] ?? null,
+
+                    'image_credit' =>
+                    $validated['image_credit'] ?? null,
+
+                    'status' => $validated['status'],
+
+                    'is_featured' =>
+                    $validated['is_featured'] ?? false,
+
+                    'is_breaking' =>
+                    $validated['is_breaking'] ?? false,
+
+                    'published_at' => $publishedAt,
+
+                    'meta_title' =>
+                    $validated['meta_title']
+                        ?: $validated['title'],
+
+                    'meta_description' =>
+                    $validated['meta_description']
+                        ?: ($validated['excerpt'] ?? null),
+                ]);
+
+
+                $article->tags()->sync(
+                    $validated['tags'] ?? []
+                );
+            });
+        } catch (\Throwable $exception) {
+            // Hapus thumbnail baru jika database gagal disimpan.
+            if ($newThumbnailPath) {
+                Storage::disk('public')->delete($newThumbnailPath);
             }
 
-            $article->update([
-                'category_id' => $validated['category_id'],
+            throw $exception;
+        }
 
-                'region_id' =>
-                $validated['region_id'] ?? null,
+        if (
+            $oldThumbnailPath &&
+            $oldThumbnailPath !== $thumbnailPath
+        ) {
+            Storage::disk('public')->delete($oldThumbnailPath);
+        }
 
-                'title' => $validated['title'],
-
-                'slug' => $slug,
-
-                'excerpt' =>
-                $validated['excerpt'] ?? null,
-
-                'content' => $validated['content'],
-
-                'thumbnail' => $thumbnailPath,
-
-                'thumbnail_alt' =>
-                $validated['thumbnail_alt'] ?? null,
-
-                'image_caption' =>
-                $validated['image_caption'] ?? null,
-
-                'image_credit' =>
-                $validated['image_credit'] ?? null,
-
-                'status' => $validated['status'],
-
-                'is_featured' =>
-                $validated['is_featured'] ?? false,
-
-                'is_breaking' =>
-                $validated['is_breaking'] ?? false,
-
-                'published_at' => $publishedAt,
-
-                'meta_title' =>
-                $validated['meta_title']
-                    ?: $validated['title'],
-
-                'meta_description' =>
-                $validated['meta_description']
-                    ?: ($validated['excerpt'] ?? null),
-            ]);
-
-            $article->tags()->sync(
-                $validated['tags'] ?? []
-            );
-        });
 
         return to_route('admin.articles.index')
             ->with(
@@ -784,19 +852,15 @@ class ArticleController extends Controller
     /**
      * Menghapus artikel.
      */
-    public function destroy(Article $article): RedirectResponse
-    {
+    public function destroy(
+        Request $request,
+        Article $article
+    ): RedirectResponse {
+        $this->authorizeArticle($request, $article);
+
         $thumbnailPath = $article->thumbnail;
 
         DB::transaction(function () use ($article) {
-            /*
-        |--------------------------------------------------------------------------
-        | Hapus Relasi Tag
-        |--------------------------------------------------------------------------
-        |
-        | Putuskan relasi artikel dengan tag terlebih dahulu.
-        |
-        */
 
             $article->tags()->detach();
 

@@ -1,26 +1,47 @@
+
 import { createInertiaApp } from '@inertiajs/vue3';
-import { initializeTheme } from '@/composables/useAppearance';
-import AppLayout from '@/layouts/AppLayout.vue';
+
+import AdminLayout from '@/layouts/admin/AdminLayout.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'Lintasara';
 
 void createInertiaApp({
-    title: (title) => (title ? `${title} - ${appName}` : appName),
+    title: (title) =>
+        title ? `${title} - ${appName}` : appName,
+
     layout: (name) => {
         switch (true) {
-            case name === 'Welcome':
+            // Semua halaman portal berita publik.
+            // Masing-masing halaman menggunakan layout publik,
+            // bukan AdminLayout.
+            case name.startsWith('public/'):
                 return null;
+
+            // Halaman autentikasi dengan desain
+            // full-screen Lintasara.
+            case name === 'auth/Login':
+            case name === 'auth/ForgotPassword':
+            case name === 'auth/ResetPassword':
+            case name === 'auth/ConfirmPassword':
+                return null;
+
+            // Halaman autentikasi lainnya.
             case name.startsWith('auth/'):
                 return AuthLayout;
+
+            // Pengaturan akun.
             case name.startsWith('settings/'):
-                return [AppLayout, SettingsLayout];
+                return [AdminLayout, SettingsLayout];
+
+            // Dashboard Admin dan Penulis.
             default:
-                return AppLayout;
+                return AdminLayout;
         }
     },
+
     withApp: (app) => {
         app.directive('focus', {
             mounted: (el: HTMLElement, shouldFocus) => {
@@ -30,13 +51,11 @@ void createInertiaApp({
             },
         });
     },
+
     progress: {
-        color: '#4B5563',
+        color: '#F97316',
     },
 });
 
-// This will set light / dark mode on page load...
-initializeTheme();
-
-// This will listen for flash toast data from the server...
+// Notifikasi flash.
 initializeFlashToast();

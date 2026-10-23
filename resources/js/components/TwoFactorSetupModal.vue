@@ -1,71 +1,68 @@
 <script setup lang="ts">
-import { Form } from '@inertiajs/vue3';
-import { useClipboard } from '@vueuse/core';
-import { Check, Copy, ScanLine } from '@lucide/vue';
-import { computed, nextTick, ref, useTemplateRef, watch } from 'vue';
-import AlertError from '@/components/AlertError.vue';
-import InputError from '@/components/InputError.vue';
-import { Button } from '@/components/ui/button';
+import { Form } from "@inertiajs/vue3";
+import { useClipboard } from "@vueuse/core";
+import { Check, Copy, ScanLine } from "@lucide/vue";
+import { computed, nextTick, ref, useTemplateRef, watch } from "vue";
+import AlertError from "@/components/AlertError.vue";
+import InputError from "@/components/InputError.vue";
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
     DialogDescription,
     DialogHeader,
     DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
     InputOTP,
     InputOTPGroup,
     InputOTPSlot,
-} from '@/components/ui/input-otp';
-import { Spinner } from '@/components/ui/spinner';
-import { useAppearance } from '@/composables/useAppearance';
-import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth';
-import { confirm } from '@/routes/two-factor';
-import type { TwoFactorConfigContent } from '@/types';
+} from "@/components/ui/input-otp";
+import { Spinner } from "@/components/ui/spinner";
+import { useTwoFactorAuth } from "@/composables/useTwoFactorAuth";
+import { confirm } from "@/routes/two-factor";
+import type { TwoFactorConfigContent } from "@/types";
 
 type Props = {
     requiresConfirmation: boolean;
     twoFactorEnabled: boolean;
 };
 
-const { resolvedAppearance } = useAppearance();
-
 const props = defineProps<Props>();
-const isOpen = defineModel<boolean>('isOpen');
+const isOpen = defineModel<boolean>("isOpen");
 
 const { copy, copied } = useClipboard();
 const { qrCodeSvg, manualSetupKey, clearSetupData, fetchSetupData, errors } =
     useTwoFactorAuth();
 
 const showVerificationStep = ref(false);
-const code = ref<string>('');
+const code = ref<string>("");
 
-const pinInputContainerRef = useTemplateRef('pinInputContainerRef');
+const pinInputContainerRef = useTemplateRef("pinInputContainerRef");
 
 const modalConfig = computed<TwoFactorConfigContent>(() => {
     if (props.twoFactorEnabled) {
         return {
-            title: 'Two-factor authentication enabled',
+            title: "Two-factor authentication enabled",
             description:
-                'Two-factor authentication is now enabled. Scan the QR code or enter the setup key in your authenticator app.',
-            buttonText: 'Close',
+                "Two-factor authentication is now enabled. Scan the QR code or enter the setup key in your authenticator app.",
+            buttonText: "Close",
         };
     }
 
     if (showVerificationStep.value) {
         return {
-            title: 'Verify authentication code',
-            description: 'Enter the 6-digit code from your authenticator app',
-            buttonText: 'Continue',
+            title: "Verify authentication code",
+            description: "Enter the 6-digit code from your authenticator app",
+            buttonText: "Continue",
         };
     }
 
     return {
-        title: 'Enable two-factor authentication',
+        title: "Enable two-factor authentication",
         description:
-            'To finish enabling two-factor authentication, scan the QR code or enter the setup key in your authenticator app',
-        buttonText: 'Continue',
+            "To finish enabling two-factor authentication, scan the QR code or enter the setup key in your authenticator app",
+        buttonText: "Continue",
     };
 });
 
@@ -74,7 +71,7 @@ const handleModalNextStep = () => {
         showVerificationStep.value = true;
 
         nextTick(() => {
-            pinInputContainerRef.value?.querySelector('input')?.focus();
+            pinInputContainerRef.value?.querySelector("input")?.focus();
         });
 
         return;
@@ -90,7 +87,7 @@ const resetModalState = () => {
     }
 
     showVerificationStep.value = false;
-    code.value = '';
+    code.value = "";
 };
 
 watch(
@@ -172,13 +169,7 @@ watch(
                                 >
                                     <div
                                         v-html="qrCodeSvg"
-                                        class="flex aspect-square size-full items-center justify-center"
-                                        :style="{
-                                            filter:
-                                                resolvedAppearance === 'dark'
-                                                    ? 'invert(1) brightness(1.5)'
-                                                    : undefined,
-                                        }"
+                                        class="flex aspect-square size-full items-center justify-center bg-white"
                                     />
                                 </div>
                             </div>

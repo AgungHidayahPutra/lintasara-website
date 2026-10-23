@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import RichTextEditor from "@/components/article/RichTextEditor.vue";
 import AdminLayout from "@/layouts/admin/AdminLayout.vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
 import {
@@ -496,17 +497,9 @@ const submit = () => {
                                     <span class="text-orange-500"> * </span>
                                 </label>
 
-                                <textarea
-                                    id="content"
+                                <RichTextEditor
                                     v-model="form.content"
-                                    rows="18"
-                                    placeholder="Mulai tulis isi berita di sini..."
-                                    class="w-full resize-y rounded-xl border bg-white px-5 py-4 text-[15px] leading-7 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10"
-                                    :class="
-                                        form.errors.content
-                                            ? 'border-red-300'
-                                            : 'border-slate-200'
-                                    "
+                                    :disabled="form.processing"
                                 />
 
                                 <p

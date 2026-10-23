@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AdminLayout from "@/layouts/admin/AdminLayout.vue";
-import { Head } from "@inertiajs/vue3";
+import { Head, usePage } from "@inertiajs/vue3";
+import { computed } from "vue";
 import { Eye, FileText, Newspaper, PenLine, Users } from "lucide-vue-next";
 
 defineOptions({
@@ -17,6 +18,20 @@ defineProps<{
     };
 }>();
 
+const page = usePage();
+
+const isAdmin = computed(() => {
+    const auth = page.props.auth as
+        | {
+              user?: {
+                  role?: string;
+              } | null;
+          }
+        | undefined;
+
+    return auth?.user?.role === "admin";
+});
+
 const numberFormat = new Intl.NumberFormat("id-ID");
 </script>
 
@@ -25,10 +40,10 @@ const numberFormat = new Intl.NumberFormat("id-ID");
 
     <div class="p-4 md:p-6 lg:p-8">
         <div class="mx-auto max-w-[1600px]">
-            <!-- Heading -->
+            <!-- HEADING -->
             <div>
                 <p class="text-sm font-semibold text-orange-500">
-                    Lintasara Admin
+                    {{ isAdmin ? "Lintasara Admin" : "Lintasara Penulis" }}
                 </p>
 
                 <h1
@@ -38,12 +53,20 @@ const numberFormat = new Intl.NumberFormat("id-ID");
                 </h1>
 
                 <p class="mt-2 text-sm text-slate-500">
-                    Pantau dan kelola aktivitas portal berita Lintasara.
+                    {{
+                        isAdmin
+                            ? "Pantau dan kelola aktivitas portal berita Lintasara."
+                            : "Pantau dan kelola artikel yang Anda tulis di Lintasara."
+                    }}
                 </p>
             </div>
 
-            <!-- Statistik -->
-            <div class="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <!-- STATISTIK -->
+            <div
+                class="mt-7 grid gap-4 sm:grid-cols-2"
+                :class="isAdmin ? 'xl:grid-cols-5' : 'xl:grid-cols-4'"
+            >
+                <!-- TOTAL ARTIKEL -->
                 <div
                     class="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm"
                 >
@@ -53,13 +76,24 @@ const numberFormat = new Intl.NumberFormat("id-ID");
                         <FileText class="size-5 text-orange-500" />
                     </div>
 
-                    <p class="mt-5 text-sm text-slate-500">Total Artikel</p>
+                    <p class="mt-5 text-sm text-slate-500">
+                        {{ isAdmin ? "Total Artikel" : "Artikel Saya" }}
+                    </p>
 
                     <p class="mt-1 text-2xl font-bold text-[#071a36]">
                         {{ numberFormat.format(stats.total_articles) }}
                     </p>
+
+                    <p class="mt-1 text-xs text-slate-400">
+                        {{
+                            isAdmin
+                                ? "Seluruh artikel"
+                                : "Artikel yang Anda buat"
+                        }}
+                    </p>
                 </div>
 
+                <!-- ARTIKEL TERBIT -->
                 <div
                     class="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm"
                 >
@@ -74,8 +108,13 @@ const numberFormat = new Intl.NumberFormat("id-ID");
                     <p class="mt-1 text-2xl font-bold text-[#071a36]">
                         {{ numberFormat.format(stats.published_articles) }}
                     </p>
+
+                    <p class="mt-1 text-xs text-slate-400">
+                        Sudah dipublikasikan
+                    </p>
                 </div>
 
+                <!-- DRAFT -->
                 <div
                     class="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm"
                 >
@@ -90,9 +129,13 @@ const numberFormat = new Intl.NumberFormat("id-ID");
                     <p class="mt-1 text-2xl font-bold text-[#071a36]">
                         {{ numberFormat.format(stats.draft_articles) }}
                     </p>
+
+                    <p class="mt-1 text-xs text-slate-400">Masih dalam draft</p>
                 </div>
 
+                <!-- PENGGUNA: HANYA ADMIN -->
                 <div
+                    v-if="isAdmin"
                     class="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm"
                 >
                     <div
@@ -106,8 +149,13 @@ const numberFormat = new Intl.NumberFormat("id-ID");
                     <p class="mt-1 text-2xl font-bold text-[#071a36]">
                         {{ numberFormat.format(stats.total_users) }}
                     </p>
+
+                    <p class="mt-1 text-xs text-slate-400">
+                        Seluruh akun terdaftar
+                    </p>
                 </div>
 
+                <!-- TOTAL DILIHAT -->
                 <div
                     class="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm"
                 >
@@ -121,6 +169,14 @@ const numberFormat = new Intl.NumberFormat("id-ID");
 
                     <p class="mt-1 text-2xl font-bold text-[#071a36]">
                         {{ numberFormat.format(stats.total_views) }}
+                    </p>
+
+                    <p class="mt-1 text-xs text-slate-400">
+                        {{
+                            isAdmin
+                                ? "Total tayangan seluruh artikel"
+                                : "Total tayangan artikel Anda"
+                        }}
                     </p>
                 </div>
             </div>

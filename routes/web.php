@@ -5,6 +5,9 @@ use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\RegionController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\Public\HomeController;
+use App\Http\Controllers\Public\ArticleController as PublicArticleController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -13,7 +16,24 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::inertia('/', 'Welcome')->name('home');
+Route::get('/', [HomeController::class, 'index'])
+    ->name('home');
+
+/*
+|--------------------------------------------------------------------------
+| Detail Berita Publik
+|--------------------------------------------------------------------------
+| URL: /berita/{slug}
+|
+| Contoh:
+| /berita/generasi-muda-dan-perkembangan-ekosistem-olahraga-daerah
+|
+| Controller publik dipisahkan dari controller artikel Admin.
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/berita/{slug}', [PublicArticleController::class, 'show'])
+    ->name('public.articles.show');
 
 /*
 |--------------------------------------------------------------------------
@@ -57,8 +77,9 @@ Route::middleware([
 
         Route::resource('regions', RegionController::class)
             ->except(['show']);
-        // Users
-        // akan ditambahkan nanti.
+
+        Route::resource('users', UserController::class)
+            ->except(['show']);
     });
 
 /*
